@@ -1,0 +1,21 @@
+{
+  "short_name": "Wav-ERP",
+  "name": "Wav-ERP",
+  "description": "Premium School Management System — students, payments, and automated reports.",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#6D28D9",
+  "background_color": "#0F172A",
+  "categories": ["education", "productivity"],
+  "lang": "en-GH"
+}

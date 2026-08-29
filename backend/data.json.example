@@ -1,0 +1,21 @@
+{
+  "students": [],
+  "payments": [],
+  "deleted": [],
+  "reports": [],
+  "users": [
+    {
+      "email": "admin@school.com",
+      "password": "password123",
+      "name": "Admin User",
+      "role": "ADMIN",
+      "status": "active"
+    }
+  ],
+  "currency": "GH₵",
+  "feeConfig": {},
+  "schoolInfo": {
+    "schoolName": "SCHOOL ERP TEMPLATE",
+    "termFee": 1000
+  }
+}

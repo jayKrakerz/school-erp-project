@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Management System</title>
+    <link rel="stylesheet" href="main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen full-screen center-content">
+        <div class="card login-card">
+            <h2 id="form-title">School ERP Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" required placeholder="admin@school.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required placeholder="password123">
+                </div>
+                <div class="form-footer">
+                    <a href="#" id="forgot-pw-link">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="login-btn">Login</button>
+                <div id="login-error" class="error-text"></div>
+                <p class="mt-1">Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
+            </form>
+
+            <form id="signup-form" class="hidden">
+                <h2>Create Account</h2>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="signup-name" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signup-email" required placeholder="admin@school.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" required placeholder="password123">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+                <p class="mt-1">Already have an account? <a href="#" id="show-login">Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div id="main-layout" class="screen hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>School ERP</h2>
+                <button id="close-sidebar" class="mobile-only btn btn-icon">✕</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" data-target="dashboard" class="nav-link active">Dashboard</a>
+                <a href="#" data-target="students" class="nav-link">Students</a>
+                <a href="#" data-target="payments" class="nav-link">Payments</a>
+                <a href="#" data-target="reports" class="nav-link">Reports</a>
+                <a href="#" data-target="trash" class="nav-link">Recycle Bin</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info" id="current-user-info">Role: Admin</div>
+                <button id="logout-btn" class="btn btn-secondary btn-block">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="topbar">
+                <button id="open-sidebar" class="mobile-only btn btn-icon">☰</button>
+                <div class="topbar-search">
+                    <input type="text" id="global-search" placeholder="Search by Name, Class, or Date...">
+                </div>
+                <div class="topbar-right">
+                    <select id="currency-selector" class="btn btn-secondary"
+                        style="width: auto; border-radius: 20px; font-weight: 700;">
+                        <option value="GH₵">GH₵ (Cedis)</option>
+                        <option value="$">$ (USD)</option>
+                        <option value="£">£ (GBP)</option>
+                    </select>
+                    <button id="dark-mode-toggle" class="btn btn-icon">🌙</button>
+                </div>
+            </header>
+
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="hidden">
+                <div class="spinner"></div>
+            </div>
+
+            <div class="content-area">
+                <!-- Dashboard View -->
+                <section id="view-dashboard" class="view active">
+                    <h1>Dashboard</h1>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Population</h3>
+                            <div class="flex-between">
+                                <p id="stat-students" style="font-size:1.5rem; font-weight:800">0</p>
+                                <div style="text-align:right; font-size:0.8rem; font-weight:600">
+                                    <span style="color:#3b82f6">M: <span id="stat-males">0</span></span><br>
+                                    <span style="color:#ec4899">F: <span id="stat-females">0</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Revenue</h3>
+                            <p id="stat-revenue">---</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Arrears</h3>
+                            <p id="stat-arrears">---</p>
+                        </div>
+                        <div class="stat-card" style="border-left: 4px solid var(--success); cursor:pointer;"
+                            onclick="viewTodayPayments()">
+                            <h3>Today's Payments</h3>
+                            <p id="stat-today-count">0</p>
+                        </div>
+                        <div class="stat-card" style="border-left: 4px solid var(--accent); cursor:pointer;"
+                            onclick="viewTodayPayments()">
+                            <h3>Today's Revenue</h3>
+                            <p id="stat-today-revenue">---</p>
+                        </div>
+                        <div class="stat-card" style="border-left: 4px solid var(--danger);">
+                            <h3>Recycle Bin</h3>
+                            <p id="stat-trash">0</p>
+                        </div>
+                    </div>
+                    <div class="charts-grid mt-2">
+                        <div class="chart-container card">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Students View -->
+                <section id="view-students" class="view hidden">
+                    <div class="flex-between mb-1">
+                        <h1>Students</h1>
+                        <div class="flex-gap" style="display:inline-flex; align-items:center;">
+                            <div class="dropdown">
+                                <button class="btn btn-primary dropdown-toggle"
+                                    onclick="toggleDropdown('enroll-dropdown')">
+                                    Enroll Student ▾
+                                </button>
+                                <div id="enroll-dropdown" class="dropdown-menu hidden" style="left: 0; right: auto;">
+                                    <a href="#" onclick="showModal('mod-student')">👤 New Admission</a>
+                                    <a href="#" onclick="showModal('mod-bulk-add')">📋 Bulk Add (Paste)</a>
+                                </div>
+                            </div>
+                            <select id="view-class-filter" class="btn btn-secondary"
+                                style="width: auto; border-color: var(--accent);">
+                                <option value="">All Classes</option>
+                                <!-- Populated via JS -->
+                            </select>
+                            <label style="font-size:12px; color:var(--text-muted); font-weight:700;">|</label>
+                            <select id="import-class-select" class="btn btn-secondary" style="width: auto;">
+                                <option value="">Target Class (Import)</option>
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="sort-students" class="btn btn-outline" style="width: auto;">
+                                <option value="name">Sort: A-Z</option>
+                                <option value="sid">Sort: ID</option>
+                                <option value="class">Sort: Class</option>
+                            </select>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary dropdown-toggle"
+                                    onclick="toggleDropdown('student-actions')">
+                                    Data Actions ▾
+                                </button>
+                                <div id="student-actions" class="dropdown-menu hidden">
+                                    <a href="#" onclick="document.getElementById('excel-import').click()">📥 Import
+                                        Excel</a>
+                                    <a href="#" id="btn-export-students">📤 Export Excel</a>
+                                    <a href="#" onclick="generateClassRecordPDF()">📜 Class Record (PDF)</a>
+                                    <a href="#" onclick="manageDuplicates()" style="color:var(--accent)">🔍 Check for
+                                        Duplicates</a>
+                                </div>
+                            </div>
+                            <input type="file" id="excel-import" style="display:none" accept=".xlsx,.csv">
+                        </div>
+                    </div>
+
+                    <div id="class-summary" class="class-summary-container mb-2"
+                        style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <!-- Headcounts populated via JS -->
+                    </div>
+
+                    <div class="card table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Class</th>
+                                    <th>Parent Contact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="students-table-body">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Payments View -->
+                <section id="view-payments" class="view hidden">
+                    <div class="flex-between mb-1">
+                        <h1>Payments</h1>
+                        <div class="flex-gap" style="display:inline-flex; align-items:center;">
+                            <select id="view-payment-filter" class="btn btn-secondary"
+                                style="width: auto; border-color: var(--accent);">
+                                <option value="">All Classes</option>
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="sort-payments" class="btn btn-outline" style="width: auto;">
+                                <option value="date">Sort: Date</option>
+                                <option value="amount">Sort: Amount</option>
+                                <option value="balance">Sort: Balance</option>
+                                <option value="name">Sort: Name A-Z</option>
+                            </select>
+                            <select id="receipt-paper-size" class="btn btn-secondary"
+                                style="width: auto; border-color: var(--accent);">
+                                <option value="A5">A5 Receipt (Standard)</option>
+                                <option value="A4-DOUBLE">A4 (Two per Page)</option>
+                                <option value="A4-QUAD">A4 (Four per Page - 2x2)</option>
+                            </select>
+                        <button class="btn btn-primary" onclick="openBlankPayment()">Record Payment</button>
+                        </div>
+                    </div>
+
+                    <div id="payment-summary" class="class-summary-container mb-2"
+                        style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <!-- Financial summaries populated via JS -->
+                    </div>
+
+
+                    <div class="card table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Receipt ID</th>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Amount Paid</th>
+                                    <th>Balance</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-table-body">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card mt-2" style="background: var(--accent-glow); border-color: var(--accent);">
+                        <h3>📢 Payment Reminders</h3>
+                        <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">Send a quick reminder
+                            note to all students with outstanding balances.</p>
+                        <div class="flex-gap">
+                            <textarea id="arrears-note" class="form-group"
+                                style="flex:1; margin-bottom:0; padding:12px; border-radius:12px; background:white; font-family:inherit;"
+                                placeholder="e.g. Please note that all outstanding fees must be settled by next Friday..."></textarea>
+                            <button class="btn btn-primary" onclick="window.sendArrearsReminder()"
+                                style="height:fit-content; align-self:flex-end;">Send to Arrears List</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports View -->
+                <section id="view-reports" class="view hidden">
+                    <div class="flex-between mb-1">
+                        <h1>Academic Reports</h1>
+                        <div class="flex-gap" style="display:inline-flex; align-items:center;">
+                            <select id="view-report-filter" class="btn btn-secondary"
+                                style="width: auto; border-color: var(--accent);">
+                                <option value="">All Classes</option>
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="sort-reports" class="btn btn-outline" style="width: auto;">
+                                <option value="name">Sort: Name A-Z</option>
+                                <option value="total">Sort: Score</option>
+                                <option value="grade">Sort: Grade</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="showModal('mod-report')">Create Report</button>
+                        </div>
+                    </div>
+                    <div class="card table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Term</th>
+                                    <th>Total Score</th>
+                                    <th>Grade</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-table-body">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Recycle Bin View -->
+                <section id="view-trash" class="view hidden">
+                    <div class="flex-between mb-1">
+                        <h1>Recycle Bin</h1>
+                        <div class="flex-gap">
+                            <select id="trash-category" class="btn btn-outline" style="width: auto;"
+                                onchange="renderTrash()">
+                                <option value="STUDENT">Deleted Students</option>
+                                <option value="PAYMENT">Deleted Payments</option>
+                                <option value="REPORT">Deleted Reports</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="window.restoreAllStudents()">🔄 Restore
+                                Category</button>
+                            <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger)"
+                                onclick="window.emptyTrash()">🗑️ Empty Category</button>
+                        </div>
+                    </div>
+                    <div class="card table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Last Class</th>
+                                    <th>Deleted Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trash-table-body">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Student View Profile Modal -->
+    <div id="mod-student-view" class="modal hidden">
+        <div class="modal-content card" style="max-width: 550px;">
+            <div class="flex-between mb-1">
+                <h2 id="view-title" style="margin-bottom:0">Student Profile</h2>
+                <button class="btn btn-icon btn-secondary" onclick="hideModal('mod-student-view')">✕</button>
+            </div>
+            <div class="profile-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Full
+                        Name</label>
+                    <p id="v-name" style="font-weight:600; font-size:16px"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">System
+                        ID</label>
+                    <p id="v-sid" style="color:var(--accent); font-weight:700"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Current
+                        Class</label>
+                    <p id="v-class"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Parent
+                        Contact</label>
+                    <p id="v-contact"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Date of
+                        Birth</label>
+                    <p id="v-dob"></p>
+                </div>
+                <div class="info-group">
+                    <label
+                        style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Residence</label>
+                    <p id="v-residence"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Term
+                        Fees</label>
+                    <p id="v-fees" style="color:var(--success); font-weight:700"></p>
+                </div>
+                <div class="info-group">
+                    <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Prev.
+                        Arrears</label>
+                    <p id="v-arrears" style="color:var(--danger); font-weight:700"></p>
+                </div>
+            </div>
+            <div class="info-group mt-1"
+                style="padding: 12px; background: var(--bg-page); border-radius: 12px; border-left: 4px solid var(--danger);">
+                <label style="font-weight:700; font-size:11px; opacity:0.6; text-transform:uppercase">Medical
+                    Condition</label>
+                <p id="v-medical" style="font-style: italic;"></p>
+            </div>
+            <div class="modal-actions mt-2">
+                <button class="btn btn-secondary" onclick="hideModal('mod-student-view')">Close Profile</button>
+                <button class="btn btn-primary" id="v-edit-btn">Edit Details</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="mod-student" class="modal hidden">
+        <div class="modal-content card">
+            <h2>Add/Edit Student</h2>
+            <form id="form-student">
+                <input type="hidden" id="stud-id">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="stud-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Student ID</label>
+                    <input type="text" id="stud-sid" required>
+                </div>
+                <!-- Simulating class logic with text for simplicity in frontend -->
+                <div class="form-group">
+                    <label>Assigned Class</label>
+                    <select id="stud-class" required>
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="stud-gender" required>
+                        <option value="">Select Gender</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Parent Contact</label>
+                    <input type="text" id="stud-contact">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="stud-dob">
+                    </div>
+                    <div class="form-group">
+                        <label>Residence</label>
+                        <input type="text" id="stud-residence" placeholder="Street / Town">
+                    </div>
+                    <div class="form-group">
+                        <label>Previous Term Arrears</label>
+                        <input type="number" id="stud-prev-arrears" value="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Underlying Medical Condition (If Any)</label>
+                    <textarea id="stud-medical" placeholder="e.g. Asthma, Allergies, or None" rows="2"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('mod-student')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="mod-payment" class="modal hidden">
+        <div class="modal-content card">
+            <h2>Record Payment</h2>
+
+            <div id="pay-student-summary" class="hidden mb-1"
+                style="background:var(--accent-glow); padding:15px; border-radius:12px; border:1px solid var(--accent);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <p
+                            style="font-size:11px; opacity:0.7; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                            Total Amount Paid</p>
+                        <p id="pay-sum-paid" style="font-size:18px; font-weight:800; color:var(--success);">GH₵0</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p
+                            style="font-size:11px; opacity:0.7; font-weight:700; text-transform:uppercase; margin-bottom:4px;">
+                            Current Balance</p>
+                        <p id="pay-sum-bal" style="font-size:18px; font-weight:800; color:var(--danger);">GH₵0</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="form-payment">
+                <div class="form-group">
+                    <label>Student Full Name</label>
+                    <input type="text" id="pay-name-input" placeholder="Type name exactly..." required>
+                </div>
+                <div class="form-group">
+                    <label>Student Class</label>
+                    <select id="pay-class-select" required style="width: 100%;">
+                        <option value="">Select Class...</option>
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Total Fees for Term</label>
+                    <input type="number" id="pay-total" value="1000" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount Paid Now</label>
+                    <input type="number" id="pay-amount" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('mod-payment')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Add Modal -->
+    <div id="mod-bulk-add" class="modal hidden">
+        <div class="modal-content card">
+            <h2>Bulk Add Students</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                Paste names below (one name per line). They will be added to the selected class.
+            </p>
+            <form id="form-bulk-add">
+                <div class="form-group">
+                    <label>Paste Student Names</label>
+                    <textarea id="bulk-names" rows="10"
+                        placeholder="FORMAT: Name, Arrears&#10;John Doe, 500&#10;Jane Smith, 0&#10;Alice Brown, 250&#10;&#10;(Alternatively, copy/paste two columns directly from Excel)"
+                        required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Target Class (Optional - overrides file selection)</label>
+                    <select id="bulk-class-select" class="btn btn-secondary" style="width: 100%;">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('mod-bulk-add')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Process and Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="mod-report" class="modal hidden">
+        <div class="modal-content card">
+            <h2>Create Academic Report</h2>
+            <form id="form-report">
+                <div class="form-group">
+                    <label>Student ID (System ID)</label>
+                    <input type="text" id="rep-stud" required>
+                </div>
+                <div class="form-group flex-gap">
+                    <div style="flex:1">
+                        <label>Term</label>
+                        <select id="rep-term" required>
+                            <option value="1">Term 1</option>
+                            <option value="2">Term 2</option>
+                            <option value="3">Term 3</option>
+                        </select>
+                    </div>
+                    <div style="flex:1">
+                        <label>Academic Year</label>
+                        <input type="text" id="rep-year" value="2025-2026" required>
+                    </div>
+                </div>
+                <div class="form-group flex-gap">
+                    <div style="flex:1">
+                        <label>Assignment Score (40%)</label>
+                        <input type="number" id="rep-assign" max="40" required>
+                    </div>
+                    <div style="flex:1">
+                        <label>Exam Score (60%)</label>
+                        <input type="number" id="rep-exam" max="60" required>
+                    </div>
+                </div>
+                <div class="form-group flex-gap">
+                    <div style="flex:1">
+                        <label>Attendance (%)</label>
+                        <input type="number" id="rep-att" max="100" required>
+                    </div>
+                    <div style="flex:1">
+                        <label>Participation</label>
+                        <input type="text" id="rep-part" required placeholder="Good">
+                    </div>
+                </div>
+                <div class="form-group flex-gap">
+                    <div style="flex:1">
+                        <label>Conduct</label>
+                        <input type="text" id="rep-conduct" list="conduct-presets" placeholder="e.g. Excellent">
+                        <datalist id="conduct-presets">
+                            <option value="Excellent">
+                            <option value="Very Good">
+                            <option value="Good">
+                            <option value="Satisfactory">
+                            <option value="Needs Improvement">
+                        </datalist>
+                    </div>
+                    <div style="flex:1">
+                        <label>Interests</label>
+                        <input type="text" id="rep-interests" list="interest-presets" placeholder="e.g. Drawing, Reading">
+                        <datalist id="interest-presets">
+                            <option value="Reading & Writing">
+                            <option value="Drawing & Art">
+                            <option value="Music & Singing">
+                            <option value="Football & Athletics">
+                            <option value="Public Speaking">
+                        </datalist>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Remarks</label>
+                    <textarea id="rep-remarks" rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('mod-report')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reminder Status Modal -->
+    <div id="mod-reminder-status" class="modal hidden">
+        <div class="modal-content card" style="max-width: 500px;">
+            <h2>Communication Status</h2>
+            <p id="reminder-count" style="font-size: 14px; margin-bottom: 8px;">Preparing messages...</p>
+            <div id="reminder-recipients"
+                style="max-height: 200px; overflow-y: auto; background: var(--bg-page); padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px;">
+                <!-- Recipients List -->
+            </div>
+            <p style="font-size: 11px; color: var(--text-muted);">Note: This is a system-generated alert sent to parent
+                contact numbers listed in the profiles.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="hideModal('mod-reminder-status')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic -->
+    <script src="app.js"></script>
+</body>
+
+</html>

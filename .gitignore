@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/venv/
+venv/
+
+# Environment / Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env*
+*session_keys*
+
+# Database / Data (Security Sensitive)
+backend/data.json
+backend/data.json.bak
+backend/data_*.json
+backend/data.backup-*.json
+backend/data.json.corrupt-*
+backend/data.json.tmp-*
+backend/data 2.json
+backend/uploads/
+# Keep an example file if possible
+!backend/data.json.example
+
+# IDE / System
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build / Distribution
+dist/
+frontend/dist/
+build/
+.vercel/
+.netlify/
+.vite/
+
+# Python
+__pycache__/
+backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server_*.log
+launch.log
+
+# Misc
+.gemini/

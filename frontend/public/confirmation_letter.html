@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmation Letter – TRUE STAR MONTESSORI</title>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== SCREEN LAYOUT ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #d0d0d0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 12px 48px;
+      font-family: 'EB Garamond', 'Times New Roman', Times, serif;
+      min-height: 100vh;
+    }
+
+    /* ===== CONTROLS ===== */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .btn-print {
+      padding: 11px 28px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #3b4fcf, #1e3a8a);
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.4px;
+      box-shadow: 0 4px 14px rgba(30,58,138,0.4);
+      transition: transform 0.15s;
+    }
+    .btn-print:hover { transform: translateY(-1px); }
+
+    /* ===== PAPER ===== */
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      background: #fff;
+      color: #111;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 6px 40px rgba(0,0,0,0.28);
+    }
+
+    /* ===== LEFT RED BORDER ===== */
+    .red-rule {
+      position: absolute;
+      left: 18mm;
+      top: 0;
+      bottom: 0;
+      width: 2.5px;
+      background: #cc0000;
+      z-index: 5;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8mm;
+      padding: 8mm 10mm 7mm 23mm;
+      border-bottom: 2.5px solid #1a1a6e;
+    }
+
+    .crest {
+      flex-shrink: 0;
+      width: 30mm;
+      height: 30mm;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .crest img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Placeholder crest */
+    .crest-placeholder {
+      width: 30mm;
+      height: 30mm;
+      border-radius: 50%;
+      border: 3px solid #1a1a6e;
+      background: radial-gradient(circle at 40% 40%, #1e3a8a, #7b1c1c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .crest-placeholder .abbr {
+      color: #fff;
+      font-size: 11pt;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+    .crest-placeholder .year {
+      color: #ffd700;
+      font-size: 7pt;
+      font-weight: 700;
+    }
+
+    .school-name-block {
+      flex: 1;
+    }
+    .school-main {
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 24pt;
+      font-weight: 900;
+      color: #1a1a6e;
+      line-height: 1.08;
+      text-transform: uppercase;
+      letter-spacing: -0.3px;
+    }
+    .school-sub {
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 24pt;
+      font-weight: 900;
+      color: #1a1a6e;
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: -0.3px;
+    }
+    .org-name {
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 11pt;
+      font-weight: 900;
+      color: #cc0000;
+      margin-top: 3mm;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .founded {
+      font-size: 8.5pt;
+      color: #444;
+      margin-top: 2mm;
+      font-style: italic;
+    }
+    .motto {
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 9pt;
+      font-weight: 900;
+      color: #1a1a6e;
+      margin-top: 1.5mm;
+    }
+    .motto span { color: #cc0000; }
+
+    .contact-block {
+      flex-shrink: 0;
+      width: 63mm;
+      font-size: 8pt;
+      line-height: 1.75;
+      color: #222;
+      text-align: right;
+    }
+    .contact-block strong { font-weight: 700; }
+
+    /* ===== BODY ===== */
+    .body {
+      flex: 1;
+      padding: 6mm 13mm 6mm 25mm;
+      position: relative;
+    }
+
+    .refs-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5pt;
+      margin-bottom: 5mm;
+    }
+    .refs-row .ref-label { color: #444; }
+    .refs-row .ref-value { font-weight: 700; }
+
+    .recipient {
+      font-weight: 700;
+      font-size: 10.5pt;
+      margin-bottom: 5mm;
+    }
+
+    .dear {
+      font-size: 10.5pt;
+      margin-bottom: 5mm;
+    }
+
+    .letter-title {
+      text-align: center;
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 13pt;
+      font-weight: 900;
+      text-decoration: underline;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6mm;
+    }
+
+    .letter-body p {
+      text-align: justify;
+      font-size: 10.5pt;
+      line-height: 1.65;
+      margin-bottom: 4mm;
+    }
+    .letter-body strong { font-weight: 700; }
+
+    .closing { font-size: 10.5pt; margin-bottom: 2mm; }
+    .faithfully { font-size: 10.5pt; margin-bottom: 8mm; }
+
+    .sig-area {
+      min-height: 18mm;
+      margin-bottom: 2mm;
+      display: flex;
+      align-items: flex-end;
+    }
+    .sig-area img { height: 18mm; object-fit: contain; }
+    .sig-line {
+      width: 52mm;
+      border-bottom: 1px solid #555;
+    }
+
+    .sig-name  { font-weight: 900; font-size: 10.5pt; }
+    .sig-title { font-weight: 700; font-size: 10pt; }
+
+    .cc-block {
+      margin-top: 6mm;
+      font-size: 9.5pt;
+    }
+    .cc-item { margin-left: 6mm; }
+
+    /* ===== WATERMARK ===== */
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 52pt;
+      font-weight: 900;
+      color: rgba(26, 26, 110, 0.06);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 4px;
+      z-index: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    /* ===== FOOTER ===== */
+    .rainbow-bar {
+      height: 5.5mm;
+      background: linear-gradient(90deg,
+        #1a1a6e 0%,
+        #2563eb 18%,
+        #16a34a 36%,
+        #ca8a04 52%,
+        #dc2626 68%,
+        #7c3aed 84%,
+        #1a1a6e 100%
+      );
+    }
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3mm 13mm;
+      background: #1a1a6e;
+      color: #fff;
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+      font-size: 8pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { background: #fff; padding: 0; }
+      .controls { display: none !important; }
+      .paper {
+        width: 100%;
+        min-height: unset;
+        box-shadow: none;
+        page-break-inside: avoid;
+      }
+      @page { size: A4; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls (hidden on print) -->
+  <div class="controls">
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- BEGIN LETTER — edit the content inside data-* attributes -->
+  <!-- ======================================================= -->
+  <div class="paper">
+
+    <!-- Red rule -->
+    <div class="red-rule"></div>
+
+    <!-- HEADER -->
+    <div class="header">
+
+      <!-- Crest / Logo -->
+      <div class="crest">
+        <!-- Replace src with your logo URL, e.g. /logo.png -->
+        <img src="/logo.png" alt="School Crest"
+             onerror="this.style.display='none'; document.getElementById('crest-ph').style.display='flex';" />
+        <div class="crest-placeholder" id="crest-ph" style="display:none;">
+          <span class="abbr">TSM</span>
+          <span class="year">Est. 1997</span>
+        </div>
+      </div>
+
+      <!-- School name -->
+      <div class="school-name-block">
+        <!-- EDIT: School main name -->
+        <div class="school-main">TRUE STAR MONTESSORI</div>
+        <div class="school-sub">INTERNATIONAL SCHOOL</div>
+        <div class="org-name">KRISTO ASAFO SCHOOLS LTD.</div>
+        <div class="founded">(Founded: September, 1997)</div>
+        <div class="motto">MOTTO: <span>KNOWLEDGE OF GOD IS KEY</span></div>
+      </div>
+
+      <!-- Contact -->
+      <div class="contact-block">
+        <!-- EDIT: contact details -->
+        <div>P.O. ML 490 Mallam, Accra</div>
+        <div>Tel: <strong>0242773085/0240469992</strong></div>
+        <div>Email: <strong>apostlesafosch@gmail.com</strong></div>
+        <div>Website: <strong>www.greatassas.com</strong></div>
+        <div>Location: <strong>Awoshie Last Stop</strong></div>
+        <div>GPS: <strong>GC-135-2886</strong></div>
+      </div>
+
+    </div><!-- /header -->
+
+    <!-- BODY -->
+    <div class="body">
+
+      <!-- Watermark -->
+      <div class="watermark">KNOWLEDGE OF GOD IS KEY</div>
+
+      <!-- Refs + Date -->
+      <div class="refs-row">
+        <div>
+          <!-- EDIT: Reference numbers -->
+          <div><span class="ref-label">Our Ref:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+               <span class="ref-value">ASSAS/JF/07/6528</span></div>
+          <div style="margin-top:2mm;"><span class="ref-label">Your Ref:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+        </div>
+        <div style="text-align:right;">
+          <!-- EDIT: Date -->
+          <div><span class="ref-label">Date:&nbsp; </span>
+               <span class="ref-value">10<sup>th</sup> July, 2026.</span></div>
+        </div>
+      </div>
+
+      <!-- Recipient -->
+      <!-- EDIT: Recipient name -->
+      <div class="recipient">Lydia Baffour Awuah.</div>
+
+      <!-- Salutation -->
+      <!-- EDIT: Dear ... -->
+      <div class="dear">Dear Lydia,</div>
+
+      <!-- Letter title -->
+      <div class="letter-title">CONFIRMATION LETTER</div>
+
+      <!-- Body text -->
+      <div class="letter-body">
+
+        <!-- EDIT: Body paragraphs as needed -->
+        <p>
+          I write on behalf of the Board and Management to confirm you as a
+          permanent member of staff of this noble institution with effect from <strong>2<sup>nd</sup>
+          July, 2026</strong>.
+        </p>
+
+        <p>
+          You will be required to teach Pre&ndash;School at the Basic Department and
+          any other duty that may fall within your competence which will be
+          assigned to you by the Head of School and Management.
+        </p>
+
+        <p>
+          You are by this letter reminded of the terms and condition of service of this
+          noble institution. You are also however reminded and encouraged to give
+          off your maximum best to uplift the good image and academic success of
+          this great school.
+        </p>
+
+        <p>
+          You shall be an automatic member of the school welfare association for
+          which you shall contribute <strong>GH&#8373;200.00</strong> monthly to the welfare fund.
+        </p>
+
+        <p>
+          Your basic taxable salary on which your income tax will be calculated will
+          be <strong>GH&#8373;600.00</strong> and your gross salary shall be <strong>GH&#8373;2,350.00</strong>.
+        </p>
+
+      </div><!-- /letter-body -->
+
+      <!-- Closing -->
+      <div class="closing">Accept our congratulations on your new appointment.</div>
+      <div class="faithfully">Yours faithfully,</div>
+
+      <!-- Signature -->
+      <div class="sig-area">
+        <!-- Replace src with actual signature image, or remove <img> to show blank line -->
+        <img src="" alt="Signature"
+             onerror="this.style.display='none'; document.getElementById('sig-line').style.display='block';" />
+        <div class="sig-line" id="sig-line"></div>
+      </div>
+
+      <!-- Signatory name & title -->
+      <!-- EDIT: Name and title -->
+      <div class="sig-name">Madam Juliana Frimpong</div>
+      <div class="sig-title">(Head of School)</div>
+
+      <!-- Carbon copy -->
+      <div class="cc-block">
+        Cc:
+        <!-- EDIT: Add / remove Cc recipients -->
+        <div class="cc-item">Accountant</div>
+      </div>
+
+    </div><!-- /body -->
+
+    <!-- FOOTER -->
+    <div>
+      <div class="rainbow-bar"></div>
+      <div class="footer-bar">
+        <!-- EDIT: Director name / Banker -->
+        <div>DIRECTOR: APOSTLE DR. KWADWO SAFO</div>
+        <div>Bankers: ACCESS BANK</div>
+      </div>
+    </div>
+
+  </div><!-- /paper -->
+
+</body>
+</html>
