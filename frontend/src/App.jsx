@@ -3981,14 +3981,14 @@ export default function App() {
                         <ShieldCheck size={20} style={{ color: 'var(--accent)' }} />
                         Pending Activations & Recovery Requests
                       </h3>
-                      {(users || []).filter(u => u.password_recovery_requested === true || u.status === 'pending_activation').length > 0 && (
+                      {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.length>0 && (
                         <span className="badge" style={{ background: 'rgba(249,115,22,0.1)', color: '#f97316', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
-                          {(users || []).filter(u => u.password_recovery_requested === true || u.status === 'pending_activation').length} Action Required
+                          {pending.length} Action Required
                         </span>
-                      )}
+                      )})()}
                     </div>
 
-                    {(users || []).filter(u => u.password_recovery_requested === true || u.status === 'pending_activation').length === 0 ? (
+                    {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.length===0 ? (
                       <div style={{ textAlign: 'center', padding: '32px 16px' }}>
                         <ShieldCheck size={48} style={{ color: '#22c55e', marginBottom: '12px' }} />
                         <p style={{ fontWeight: 600, fontSize: '15px', color: '#22c55e', margin: 0 }}>All Accounts Secure & Active</p>
@@ -4008,7 +4008,7 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {(users || []).filter(u => u.password_recovery_requested === true || u.status === 'pending_activation').map(u => (
+                            {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.map(u => (
                               <tr key={u.email}>
                                 <td><strong>{u.name}</strong></td>
                                 <td>{u.email}</td>
@@ -4052,11 +4052,11 @@ export default function App() {
                                   </button>
                                 </td>
                               </tr>
-                            ))}
+                            ))})()}
                           </tbody>
                         </table>
                       </div>
-                    )}
+                    )})()}
                   </div>
 
                   <AccessManagementExtras backendUrl={CONFIG.backendUrl} token={token} classes={allClasses} />
@@ -4071,12 +4071,15 @@ export default function App() {
                               <th>Name</th>
                               <th>Email</th>
                               <th>Role</th>
+                              <th>Status</th>
                               <th style={{ textAlign: 'right' }}>Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {users.map(u => (
-                              <tr key={u.email}>
+                            {users.map(u => {
+                              const isPending = ['pending','pending_activation'].includes((u.status||'').toLowerCase());
+                              return (
+                              <tr key={u.email} style={isPending ? { background: 'rgba(249,115,22,0.04)' } : undefined}>
                                 <td>{u.name}</td>
                                 <td>{u.email}</td>
                                 <td>
@@ -4086,7 +4089,11 @@ export default function App() {
                                     padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700
                                   }}>{u.role}</span>
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td>{isPending ? <span className="badge" style={{ background: 'rgba(249,115,22,0.1)', color: '#f97316', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}><Clock3 size={11} style={{ marginRight: 4 }} />Pending</span> : <span className="badge" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>Active</span>}</td>
+                                <td style={{ textAlign: 'right', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                  {isPending && (
+                                    <button className="btn btn-secondary" style={{ fontSize: '11px', padding: '4px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', fontWeight: 700 }} onClick={() => handleActivateUser(u)}><ShieldCheck size={12} /> Activate</button>
+                                  )}
                                   {u.email !== 'admin@school.com' && u.email !== user.email && (
                                     <button className="btn btn-icon btn-secondary" aria-label={`Remove user ${u.name}`} style={{ color: 'var(--danger)' }} onClick={() => {
                                       setUserToDelete(u);
@@ -4097,7 +4104,7 @@ export default function App() {
                                   )}
                                 </td>
                               </tr>
-                            ))}
+                            )})}
                           </tbody>
                         </table>
                       </div>
