@@ -3974,81 +3974,87 @@ export default function App() {
                     <h1>System Access & User Management</h1>
                   </div>
 
-                  {/* Pending Activations & Recovery Requests Section */}
-                  <div className="card" style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <ShieldCheck size={20} style={{ color: 'var(--accent)' }} />
+                  {/* Pending Activations & Recovery Requests — refreshed UI */}
+                  <div className="card" style={{ marginBottom: '24px', overflow: 'hidden', border: '1px solid var(--border-color)', borderRadius: '16px', padding: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)', borderBottom: '1px solid var(--border-color)' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, fontSize: '14px', fontWeight: 800, letterSpacing: '-0.01em' }}>
+                        <span style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}><ShieldCheck size={16} /></span>
                         Pending Activations & Recovery Requests
                       </h3>
-                      {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.length>0 && (
-                        <span className="badge" style={{ background: 'rgba(249,115,22,0.1)', color: '#f97316', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
-                          {pending.length} Action Required
+                      {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.length>0 ? (
+                        <span style={{ background: '#f97316', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.02em', boxShadow: '0 2px 8px rgba(249,115,22,0.3)' }}>
+                          {pending.length} pending
                         </span>
+                      ) : (
+                        <span style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, border: '1px solid rgba(34,197,94,0.2)' }}>All clear</span>
                       )})()}
                     </div>
 
                     {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.length===0 ? (
-                      <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-                        <ShieldCheck size={48} style={{ color: '#22c55e', marginBottom: '12px' }} />
-                        <p style={{ fontWeight: 600, fontSize: '15px', color: '#22c55e', margin: 0 }}>All Accounts Secure & Active</p>
-                        <p style={{ fontSize: '13px', color: 'var(--text-main)', marginTop: '4px', margin: 0 }}>There are no pending activation or recovery requests at this time.</p>
+                      <div style={{ textAlign: 'center', padding: '28px 20px', background: 'rgba(34,197,94,0.04)' }}>
+                        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(34,197,94,0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, border: '1px solid rgba(34,197,94,0.15)' }}>
+                          <ShieldCheck size={24} style={{ color: '#16a34a' }} />
+                        </div>
+                        <p style={{ fontWeight: 800, fontSize: '14px', color: '#16a34a', margin: 0 }}>All accounts secure</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>No pending activations or recovery requests.</p>
                       </div>
                     ) : (
                       <div className="table-responsive">
-                        <table className="table">
+                        <table className="table" style={{ margin: 0 }}>
                           <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Email</th>
-                              <th>Role</th>
-                              <th>Assigned Class</th>
-                              <th>Status / Issue</th>
-                              <th style={{ textAlign: 'right' }}>Action</th>
+                            <tr style={{ background: 'var(--bg-page)' }}>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px' }}>Name</th>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px' }}>Email</th>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px' }}>Role</th>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px' }}>Class</th>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px' }}>Issue</th>
+                              <th style={{ fontSize: '10px', letterSpacing: '0.06em', padding: '10px 16px', textAlign: 'right' }}>Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(() => { const pending=(users||[]).filter(u=>u.password_recovery_requested===true || ['pending','pending_activation'].includes((u.status||'').toLowerCase())); return pending.map(u => (
-                              <tr key={u.email}>
-                                <td><strong>{u.name}</strong></td>
-                                <td>{u.email}</td>
-                                <td>
+                              <tr key={u.email} style={{ transition: 'background 0.15s' }} onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,0.04)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                                <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: '13px' }}>{u.name}</td>
+                                <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{u.email}</td>
+                                <td style={{ padding: '12px 16px' }}>
                                   <span className="badge" style={{
                                     background: u.role === 'ADMIN' ? 'rgba(239,68,68,0.1)' : u.role === 'ACCOUNTANT' ? 'rgba(34,197,94,0.1)' : 'rgba(168,85,247,0.1)',
-                                    color: u.role === 'ADMIN' ? '#ef4444' : u.role === 'ACCOUNTANT' ? '#22c55e' : '#a855f7',
-                                    padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700
+                                    color: u.role === 'ADMIN' ? '#ef4444' : u.role === 'ACCOUNTANT' ? '#16a34a' : '#7c3aed',
+                                    padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, letterSpacing: '0.03em', border: `1px solid ${u.role === 'ADMIN' ? 'rgba(239,68,68,0.15)' : u.role === 'ACCOUNTANT' ? 'rgba(34,197,94,0.15)' : 'rgba(168,85,247,0.15)' }`
                                   }}>{u.role}</span>
                                 </td>
-                                <td>{u.assignedClass || 'N/A'}</td>
-                                <td>
+                                <td style={{ padding: '12px 16px', fontSize: '12px' }}>{u.assignedClass || '—'}</td>
+                                <td style={{ padding: '12px 16px' }}>
                                   {u.password_recovery_requested === true ? (
-                                    <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
-                                      <AlertTriangle size={13} aria-hidden="true" /> Password Recovery
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.08)', color: '#dc2626', padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, border: '1px solid rgba(239,68,68,0.12)' }}>
+                                      <AlertTriangle size={12} /> Recovery
                                     </span>
                                   ) : (
-                                    <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
-                                      <Clock3 size={13} aria-hidden="true" /> Pending Activation
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(249,115,22,0.08)', color: '#ea580c', padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, border: '1px solid rgba(249,115,22,0.12)' }}>
+                                      <Clock3 size={12} /> Pending
                                     </span>
                                   )}
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                   <button
-                                    className="btn btn-secondary"
+                                    className="btn btn-primary"
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       gap: '6px',
-                                      fontSize: '12px',
-                                      padding: '6px 12px',
-                                      border: '1px solid rgba(34,197,94,0.4)',
-                                      background: 'rgba(34,197,94,0.05)',
-                                      color: '#22c55e',
-                                      fontWeight: 600,
-                                      borderRadius: '6px'
+                                      fontSize: '11px',
+                                      padding: '7px 12px',
+                                      background: '#16a34a',
+                                      border: 'none',
+                                      color: 'white',
+                                      fontWeight: 700,
+                                      borderRadius: '8px',
+                                      boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
+                                      whiteSpace: 'nowrap'
                                     }}
                                     onClick={() => handleActivateUser(u)}
                                   >
-                                    <ShieldCheck size={14} /> Activate & Reset Password
+                                    <ShieldCheck size={13} /> Activate
                                   </button>
                                 </td>
                               </tr>
