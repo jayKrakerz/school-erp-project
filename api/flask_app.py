@@ -293,7 +293,7 @@ def register_institution():
         "email": email,
         "password": hash_password(password),
         "role": "ADMIN",
-        "status": "active",
+        "status": "pending",
         "schoolId": sid,
         "dateAdded": datetime.now().isoformat()
     }
