@@ -185,14 +185,25 @@ export default function App() {
   });
 
   // ── AGGRESSIVE DEPARTMENT STATE ENFORCER ──
-  // The backend might send the old "PRESCHOOL" object, wiping out our local migration.
-  // This useEffect watches the state and instantly corrects it if the old format slips in.
+  // The backend might send the old "PRESCHOOL" object or an empty {} (new schools),
+  // wiping out our local migration. This enforces all 5 cats.
+  const DEFAULT_DEPTS = {
+    "PRESCHOOL I": ["CRECHE", "NURSERY 1", "NURSERY ONE", "NURSERY 1A", "NURSERY 1B"],
+    "PRESCHOOL II": ["NURSERY 2", "NURSERY TWO", "NURSERY 2A", "NURSERY 2B", "KG 1A", "KG 1B", "KG 2A", "KG 2B", "KINDERGARTEN 1", "KINDERGARTEN 2", "KINDERGARTEN", "KINDERGATERN"],
+    "LOWER PRIMARY": ["BASIC 1", "BASIC 2", "BASIC 3"],
+    "UPPER PRIMARY": ["BASIC 4", "BASIC 5", "BASIC 6"],
+    "JHS": ["BASIC 7", "BASIC 8", "BASIC 9"]
+  };
   useEffect(() => {
-    if (departments["PRESCHOOL"] || !departments["PRESCHOOL I"] || !departments["PRESCHOOL II"]) {
-      const migrated = { ...departments };
+    const needsFix = departments["PRESCHOOL"] || !departments["PRESCHOOL I"] || !departments["PRESCHOOL II"] || !departments["LOWER PRIMARY"] || !departments["UPPER PRIMARY"] || !departments["JHS"];
+    if (needsFix) {
+      const migrated = { ...DEFAULT_DEPTS, ...departments };
       delete migrated["PRESCHOOL"];
-      if (!migrated["PRESCHOOL I"]) migrated["PRESCHOOL I"] = ["CRECHE", "NURSERY 1", "NURSERY ONE", "NURSERY 1A", "NURSERY 1B"];
-      if (!migrated["PRESCHOOL II"]) migrated["PRESCHOOL II"] = ["NURSERY 2", "NURSERY TWO", "NURSERY 2A", "NURSERY 2B", "KG 1A", "KG 1B", "KG 2A", "KG 2B", "KINDERGARTEN 1", "KINDERGARTEN 2", "KINDERGARTEN", "KINDERGATERN"];
+      if (!migrated["PRESCHOOL I"]) migrated["PRESCHOOL I"] = DEFAULT_DEPTS["PRESCHOOL I"];
+      if (!migrated["PRESCHOOL II"]) migrated["PRESCHOOL II"] = DEFAULT_DEPTS["PRESCHOOL II"];
+      if (!migrated["LOWER PRIMARY"]) migrated["LOWER PRIMARY"] = DEFAULT_DEPTS["LOWER PRIMARY"];
+      if (!migrated["UPPER PRIMARY"]) migrated["UPPER PRIMARY"] = DEFAULT_DEPTS["UPPER PRIMARY"];
+      if (!migrated["JHS"]) migrated["JHS"] = DEFAULT_DEPTS["JHS"];
       setDepartments(migrated);
       localStorage.setItem('erp_departments', JSON.stringify(migrated));
     }
@@ -748,7 +759,19 @@ export default function App() {
         setFeedingRecords(data.feedingRecords || []);
         setAllClasses(normaliseClasses(data.allClasses));
         setSettings(data.settings || { logoUrl: '', backgroundUrl: '' });
-        setDepartments(data.departments || {});
+        // Merge backend departments with defaults so new schools (empty {}) still show all 5 cats: PRESCHOOL I/II, LOWER/UPPER PRIMARY, JHS — fixes Select Department showing only 2
+        const _DEFAULT = {
+          "PRESCHOOL I": ["CRECHE", "NURSERY 1", "NURSERY ONE", "NURSERY 1A", "NURSERY 1B"],
+          "PRESCHOOL II": ["NURSERY 2", "NURSERY TWO", "NURSERY 2A", "NURSERY 2B", "KG 1A", "KG 1B", "KG 2A", "KG 2B", "KINDERGARTEN 1", "KINDERGARTEN 2", "KINDERGARTEN", "KINDERGATERN"],
+          "LOWER PRIMARY": ["BASIC 1", "BASIC 2", "BASIC 3"],
+          "UPPER PRIMARY": ["BASIC 4", "BASIC 5", "BASIC 6"],
+          "JHS": ["BASIC 7", "BASIC 8", "BASIC 9"]
+        };
+        if (data.departments && Object.keys(data.departments).length > 0) {
+          setDepartments(prev => ({ ..._DEFAULT, ...data.departments }));
+        } else if (!data.departments || Object.keys(data.departments).length === 0) {
+          setDepartments(prev => (Object.keys(prev).length >= 5 ? prev : { ..._DEFAULT, ...prev }));
+        }
         setReportTemplates(data.reportTemplates || []);
 
         // Delaying the hasLoaded flag to ensure state updates settle before syncing triggers
@@ -1021,6 +1044,9 @@ export default function App() {
     }
   }, [user]);
 
+  // Clear report loading spinner once navigation succeeds
+  useEffect(() => { if (activeReport) setLoadingReportId(null); }, [activeReport]);
+
   // TEACHER dashboard access allowed (restricted to class arrears in the UI)
 
   // Keep the browser tab meaningful as the user moves between application routes.
@@ -1230,12 +1256,23 @@ export default function App() {
   const handleImageUpload = async (file, type) => {
     if (!file) return;
 
-    // Signatures are stored as base64 locally — no backend needed
+    // Signatures stored as base64 — persist to backend settings so report cards can render them (was local-only, so Reports showed OFFICIAL SIGNATURE REQUIRED)
     const SIGNATURE_TYPES = ['accountantSignature', 'headSignature', 'preschoolHeadSignature'];
     if (SIGNATURE_TYPES.includes(type)) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setSettings(prev => ({ ...prev, [`${type}Url`]: e.target.result }));
+      reader.onload = async (e) => {
+        const newUrl = e.target.result;
+        // cap 2MB like student photo check to avoid 413 / quota errors
+        if (newUrl.length > 2 * 1024 * 1024 * 1.37) {
+          alert("Image is too large. Please select a photo under 2MB.");
+          return;
+        }
+        setSettings(prev => {
+          const next = { ...prev, [`${type}Url`]: newUrl };
+          // sync to per-school settings on backend (schoolId-scoped via backend/server.py:212 SCHOOL_CONFIG_KEYS)
+          syncWithBackend('settings', next).catch(err => console.warn("Failed to save signature to backend", err));
+          return next;
+        });
       };
       reader.readAsDataURL(file);
       return;
@@ -1750,7 +1787,7 @@ export default function App() {
   };
 
   const handleOpenReport = async (student) => {
-    if (!student || (!student.id && !student._id)) return alert("Error: Student ID not found.");
+    if (!student || (!student.id && !student._id)) { feedback.toast.error("Student ID not found."); return; }
     setLoadingReportId(student.id || student._id);
     
     // 1. Find student department and assigned template
@@ -1772,13 +1809,9 @@ export default function App() {
     const paid = (payments || []).filter(p => p.studentSid === student.sid).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     const hydratedStudent = { ...student, balance: Math.max(0, fees.totalDue - paid) };
 
-    // 4. Update state and navigate with a tiny delay to ensure state commitment
-    // before the Route's conditional redirect check fires.
+    // 4. Update state and navigate — useEffect below clears loading after activeReport commits
     setActiveReport({ student: hydratedStudent, template, reportData });
-    setTimeout(() => {
-      navigate(`/edit-report/${student.id || student._id}`);
-      setLoadingReportId(null);
-    }, 50);
+    navigate(`/edit-report/${student.id || student._id}`);
   };
 
   const handleSaveStudentReport = async (reportData) => {
@@ -2696,7 +2729,7 @@ export default function App() {
           {/* REPORTS — ADMIN and TEACHER only (not ACCOUNTANT) */}
           {(user?.role?.toUpperCase() !== 'ACCOUNTANT') && (
             <Link to="/reports" aria-current={activeView === 'reports' ? 'page' : undefined} className={`nav-link ${activeView === 'reports' ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
-              <FileText size={18} /> Reports
+              <FileText size={18} /> Report Cards
             </Link>
           )}
 
@@ -3322,9 +3355,13 @@ export default function App() {
                 <ErrorBoundary name="Reports View">
                   <section className="view active reports-page-view">
                     <div className="flex-between mb-2 flex-wrap" style={{ gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ padding: '8px 16px', background: 'var(--accent)', color: 'white', borderRadius: '12px', fontWeight: 800, fontSize: '13px', boxShadow: '0 4px 10px var(--accent-glow)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                          <FileText size={16} aria-hidden="true" /> REPORT ARCHIVE
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                          <FileText size={18} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em' }}>Report Cards</h1>
+                          <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: .6, fontWeight: 600 }}>{schoolInfo.term || 'TERM'} • {schoolInfo.academicYear || '—'} • {visibleReportRecordCount} of {visibleReportStudents.length} students completed</p>
                         </div>
                       </div>
                       <div className="flex-gap" style={{ alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto', justifyContent: 'flex-end' }}>
@@ -3428,7 +3465,7 @@ export default function App() {
                       </article>
                     </div>
 
-                    <div className="card" style={{ padding: '0', overflow: 'hidden', marginTop: '8px' }}>
+                    <div className="card" style={{ padding: '0', overflow: 'auto', marginTop: '8px' }}>
                       <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--glass-bg)', display: 'flex', alignItems: 'center' }}>
                         <div className="search-bar" style={{
                           maxWidth: '350px',
@@ -3478,10 +3515,10 @@ export default function App() {
                                   }}
                                 />
                               </th>
-                              <th>Student</th>
-                              <th>Class</th>
-                              <th>Academic History</th>
-                              <th style={{ textAlign: 'right' }}>Actions</th>
+                              <th scope="col">Student</th>
+                              <th scope="col">Class</th>
+                              <th scope="col">Academic History</th>
+                              <th scope="col" style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
                           </thead>
                           <tbody>

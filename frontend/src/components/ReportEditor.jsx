@@ -314,9 +314,9 @@ export default function ReportEditor({
     };
     // PRIORITIZE GLOBAL BRANDING: Link to settings and schoolInfo if provided
     if (settings?.logoUrl) base.logoUrl = settings.logoUrl;
-    // Select the correct signature based on department type
+    // Select the correct signature based on department type — fallback to the other head signature so CRECHE still shows the uploaded Head of School sig
     const isPreschool = isPreschool1 || isPreschool2;
-    const correctSig = isPreschool ? settings?.preschoolHeadSignatureUrl : settings?.headSignatureUrl;
+    const correctSig = isPreschool ? (settings?.preschoolHeadSignatureUrl || settings?.headSignatureUrl) : (settings?.headSignatureUrl || settings?.preschoolHeadSignatureUrl);
     if (correctSig) base.signatureUrl = correctSig;
     if (schoolInfo?.schoolName) base.schoolName = schoolInfo.schoolName;
 
@@ -403,11 +403,12 @@ export default function ReportEditor({
       interest: '',
       remarks: '',
       headRemarks: '',
-      // Restore persisted signature or fallback to global settings based on department
+      // Restore persisted signature or fallback to global settings based on department — fallback prevents empty HEAD OF SCHOOL'S SIGNATURE box when only one sig was uploaded
       headSignature: (() => {
         const isPreschool = isPreschool1 || isPreschool2;
         const signatureUrlKey = isPreschool ? 'preschoolHeadSignatureUrl' : 'headSignatureUrl';
-        const signatureToUse = settings?.[signatureUrlKey] || '';
+        const fallbackKey = isPreschool ? 'headSignatureUrl' : 'preschoolHeadSignatureUrl';
+        const signatureToUse = settings?.[signatureUrlKey] || settings?.[fallbackKey] || '';
         return localStorage.getItem(`erp_jhs_signature_${student?.sid || 'default'}`) || signatureToUse;
       })(),
       facilitatorName: facilitatorName,
@@ -745,8 +746,8 @@ export default function ReportEditor({
     setLocalSettings(prev => {
       const isPreschool = isPreschool1 || isPreschool2;
       const signatureToUse = isPreschool
-        ? (settings?.preschoolHeadSignatureUrl || '')
-        : (settings?.headSignatureUrl || '');
+        ? (settings?.preschoolHeadSignatureUrl || settings?.headSignatureUrl || '')
+        : (settings?.headSignatureUrl || settings?.preschoolHeadSignatureUrl || '');
 
       const deptBackendSettings = settings?.[`${dept}_settings`] || {};
 
@@ -1856,9 +1857,11 @@ export default function ReportEditor({
                           src={meta.headSignature}
                           alt="Signature"
                           style={{
-                            width: `${settings?.headSigWidth || 180}px`,
-                            height: `${settings?.headSigHeight || 40}px`,
-                            objectFit: 'fill',
+                            maxWidth: `${Math.min(settings?.headSigWidth || 180, 150)}px`,
+                            maxHeight: '38px',
+                            width: 'auto',
+                            height: 'auto',
+                            objectFit: 'contain',
                             filter: 'contrast(1.1) brightness(0.95)',
                             display: 'block'
                           }}
@@ -2116,8 +2119,8 @@ export default function ReportEditor({
                     </div>
                     <div style={{ border: `2px solid ${accentColor}` }}>
                       <div style={{ background: accentColor, color: 'white', padding: '4px', fontWeight: 600, fontSize: '10px', textAlign: 'center' }}>HEAD OF SCHOOL'S SIGNATURE</div>
-                      <div style={{ minHeight: '65px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-                        {localSettings.signatureUrl && <img src={localSettings.signatureUrl} style={{ width: `${settings?.preschoolHeadSigWidth || 160}px`, height: `${settings?.preschoolHeadSigHeight || 40}px`, objectFit: 'fill' }} alt="Sig" />}
+                       <div style={{ minHeight: '50px', maxHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 10px', overflow: 'hidden' }}>
+                        {localSettings.signatureUrl && <img src={localSettings.signatureUrl} style={{ maxWidth: `${Math.min(settings?.preschoolHeadSigWidth || 160, 140)}px`, maxHeight: '38px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }} alt="Sig" />}
                       </div>
                     </div>
                   </div>

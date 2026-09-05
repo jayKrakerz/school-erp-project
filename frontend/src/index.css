@@ -1460,10 +1460,14 @@ p a:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .ui-toast, .ui-confirm-backdrop, .ui-confirm { animation: none; }
+    .ui-toast, .ui-confirm-backdrop, .ui-confirm, .modal, .card, .view { animation: none !important; transition: none !important; }
     .ui-skeleton::after { animation: none; display: none; }
 }
 
+@media (max-width: 600px) {
+    .report-page { padding: 8mm !important; }
+    .report-page .report-page-signature img { max-width: 120px !important; }
+}
 @media print {
     .ui-toast-viewport, .ui-confirm-backdrop, .ui-pagination { display: none !important; }
 }
@@ -3949,4 +3953,14 @@ button.dashboard-kpi:hover {
     .attendance-page-view .dashboard-kpi-card {
         border-radius: 18px !important;
     }
+}
+/* — Global anti-cutoff guards — nothing should clip text or controls */
+.table-responsive { overflow-x: auto !important; overflow-y: visible !important; -webkit-overflow-scrolling: touch; }
+.table td, .table th { overflow-wrap: anywhere; word-break: break-word; white-space: normal !important; }
+.card { overflow-wrap: anywhere; }
+.modal-content { max-height: 90vh !important; overflow-y: auto !important; word-break: break-word; }
+.report-page { overflow: visible !important; height: auto !important; min-height: 297mm; }
+@media (max-width: 640px) {
+    .table th, .table td { font-size: 12px !important; padding: 10px 12px !important; }
+    .view { overflow-x: hidden; }
 }

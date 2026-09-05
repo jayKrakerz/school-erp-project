@@ -182,7 +182,7 @@ export default function BrandingSettings({ syncWithBackend }) {
             <div key={f.key} className="form-group">
               <label htmlFor={`branding-${f.key}-picker`}>{f.label}</label>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <input id={`branding-${f.key}-picker`} type="color" value={form[f.key] || '#7e22ce'}
+                <input id={`branding-${f.key}-picker`} type="color" aria-label={`${f.label} color picker`} value={form[f.key] || '#7e22ce'}
                   onChange={e => set(f.key, e.target.value)}
                   style={{ width: 52, height: 48, padding: '4px 6px', border: '2px solid var(--border-color)', borderRadius: 12, cursor: 'pointer', background: 'var(--bg-page)' }}
                 />
