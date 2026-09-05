@@ -45,6 +45,7 @@ def add_cors(response):
 SESSION_SECRET = os.environ.get('SESSION_SECRET', 'TSA-STABLE-PRODUCTION-SECRET-2026-X9')
 TOKEN_TTL = 7 * 24 * 3600
 S_BYTES = SESSION_SECRET.encode('utf-8')
+SUPERADMIN_EMAILS = {"superadmin@school.com", "admin@school.com", "wav.superadmin@gmail.com"}
 
 def hash_password(password):
     """Bcrypt hashing (Industry Standard)."""
@@ -106,10 +107,21 @@ def token_required(f):
     return decorated
 
 # --- Production Data Storage (Atomic Save) ---
+def ensure_superadmin(d):
+    """Ensure a cross-school superadmin exists so pending institutions can be activated."""
+    for email in SUPERADMIN_EMAILS:
+        if not any(u.get('email','').lower().strip()==email for u in d.get('users',[])):
+            d.setdefault('users',[]).append({
+                "name": "Super Admin", "email": email,
+                "password": hash_password("Super@2026!"),
+                "role": "ADMIN", "status": "active", "schoolId": "default",
+                "dateAdded": datetime.now().isoformat()
+            })
 def load_data():
     """CRITICAL: Absolute Disk Read with No Cache."""
     if not os.path.exists(DATA_FILE):
-        return {"schools": {}, "users": []}
+        d={"schools": {}, "users": []}
+        ensure_superadmin(d); save_data(d); return d
     
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -119,7 +131,7 @@ def load_data():
         if not isinstance(d, dict): d = {}
         if 'users' not in d: d['users'] = []
         if 'schools' not in d: d['schools'] = {}
-        
+        ensure_superadmin(d)
         # Unify: ensure every user has a schoolId
         for u in d['users']:
             if not u.get('schoolId'): u['schoolId'] = 'default'
@@ -408,8 +420,15 @@ def activate_user():
     if not target_email or not new_password:
         return jsonify({"error": "Email and newPassword are required"}), 400
 
-    u = next((u for u in d.get('users', []) if u.get('email', '').lower().strip() == target_email and u.get('schoolId') == sid), None)
-    if not u: return jsonify({"error": "User not found"}), 404
+    # Superadmin can activate across any school (gatekeeper bypass)
+    is_super = (requester.get('email','').lower().strip() in SUPERADMIN_EMAILS)
+    if is_super:
+        u = next((u for u in d.get('users', []) if u.get('email', '').lower().strip() == target_email), None)
+        if not u: return jsonify({"error": "User not found"}), 404
+        sid = u.get('schoolId','default')
+    else:
+        u = next((u for u in d.get('users', []) if u.get('email', '').lower().strip() == target_email and u.get('schoolId') == sid), None)
+        if not u: return jsonify({"error": "User not found"}), 404
 
     new_hash = hash_password(new_password)
     u['status'] = 'active'
