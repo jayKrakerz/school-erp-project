@@ -1,0 +1,29 @@
+services:
+  # Flask API (Python) — serves /api/* and persists data to /tmp (ephemeral; attach Render Disk for permanence)
+  - type: web
+    name: school-erp-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r api/requirements.txt
+    startCommand: gunicorn api.flask_app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SESSION_SECRET
+        sync: false
+      - key: VERCEL
+        value: 1
+
+  # Static frontend (Vite) — consumes the API above
+  - type: web
+    name: school-erp-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /api/(.*)
+        destination: https://school-erp-api.onrender.com/api/$1
+      - type: rewrite
+        source: /*
+        destination: /index.html
