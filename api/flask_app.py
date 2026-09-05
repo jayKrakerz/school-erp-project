@@ -599,6 +599,27 @@ def sync(collection, action=None, item_id=None):
     return jsonify({"success": True})
 
 # ============================================================
+# MISSING ENDPOINTS FOR frontend AccessManagementExtras (avoid 404 HTML)
+# ============================================================
+
+@app.route('/api/invitations', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/api/invitations/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
+@token_required
+def invitations_stub(subpath=None):
+    if request.method == 'OPTIONS': return '', 204
+    if request.method == 'GET': return jsonify({"items": []})
+    # POST create stub — frontend expects {invitation, token}
+    body=request.get_json() or {}
+    return jsonify({"invitation": {"id": "inv-stub", "email": body.get('email',''), "role": body.get('role','TEACHER'), "status": "pending"}, "token": "stub"})
+
+@app.route('/api/audit', methods=['GET', 'OPTIONS'])
+@app.route('/api/audit/<path:subpath>', methods=['GET', 'OPTIONS'])
+@token_required
+def audit_stub(subpath=None):
+    if request.method == 'OPTIONS': return '', 204
+    return jsonify({"items": []})
+
+# ============================================================
 # FILE UPLOAD
 # ============================================================
 
