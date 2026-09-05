@@ -596,14 +596,17 @@ def upload_serve(f): return send_from_directory(UPLOADS_DIR, f)
 # STATIC FILE SERVING (SPA) - Skip on Vercel (handled by Vercel CDN)
 # ============================================================
 
-if not os.environ.get('VERCEL'):
+if not os.environ.get('VERCEL') and os.path.exists(os.path.join(DIST_DIR, 'index.html')):
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve(path):
         if path.startswith('api/'): return jsonify({"error": "Not Found"}), 404
         if path and os.path.exists(os.path.join(DIST_DIR, path)):
             return send_from_directory(DIST_DIR, path)
-        return send_file(os.path.join(DIST_DIR, 'index.html'))
+        try:
+            return send_file(os.path.join(DIST_DIR, 'index.html'))
+        except FileNotFoundError:
+            return jsonify({"error": "Frontend not built on this service — use the Static Site URL"}), 404
 
 if __name__ == '__main__':
     app.run(port=8080, debug=False)
