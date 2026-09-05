@@ -519,8 +519,11 @@ def get_all():
          for k in ['schoolInfo','feeConfig','settings','currency','allClasses','departments','feedingConfig','reportTemplates','attendance']}
     for k in ['students','payments','reports','staff','expenditures','deleted','activity_log','studentReports']:
         r[k] = [i for i in d.get(k, []) if i.get('schoolId') == sid]
-    # Include school-scoped users (without passwords)
-    r['users'] = [public_user(usr) for usr in d.get('users', []) if usr.get('schoolId') == sid]
+    # Superadmin sees pending users across all schools (gatekeeper)
+    if (u or {}).get('email','').lower().strip() in SUPERADMIN_EMAILS:
+        r['users'] = [public_user(usr) for usr in d.get('users', [])]
+    else:
+        r['users'] = [public_user(usr) for usr in d.get('users', []) if usr.get('schoolId') == sid]
     return jsonify(r)
 
 @app.route('/api/data/<collection>', methods=['POST', 'OPTIONS'])
