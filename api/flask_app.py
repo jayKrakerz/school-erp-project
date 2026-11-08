@@ -45,7 +45,7 @@ def add_cors(response):
 SESSION_SECRET = os.environ.get('SESSION_SECRET', 'TSA-STABLE-PRODUCTION-SECRET-2026-X9')
 TOKEN_TTL = 7 * 24 * 3600
 S_BYTES = SESSION_SECRET.encode('utf-8')
-SUPERADMIN_EMAILS = {"superadmin@school.com", "admin@school.com", "wav.superadmin@gmail.com"}
+SUPERADMIN_EMAILS = {"superadmin@school.com", "admin@school.com", "samuel15appiah@gmail.com"}
 
 def hash_password(password):
     """Bcrypt hashing (Industry Standard)."""
