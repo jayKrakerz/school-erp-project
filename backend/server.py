@@ -541,14 +541,25 @@ if not SESSION_SECRET:
 SESSION_SECRET_BYTES = SESSION_SECRET.encode('utf-8')
 TOKEN_TTL_SECONDS = int(os.environ.get('TOKEN_TTL_SECONDS', 7 * 24 * 3600))  # default 7 days
 
+SUPERADMIN_PRIMARY_EMAIL = (
+    os.environ.get('SUPERADMIN_PRIMARY_EMAIL', 'samuel15appiah@gmail.com').lower().strip()
+)
 SUPERADMIN_EMAILS = frozenset(
     e.strip().lower() for e in os.environ.get(
         'SUPERADMIN_EMAILS',
-        'superadmin@school.com,admin@school.com,samuel15appiah@gmail.com',
+        SUPERADMIN_PRIMARY_EMAIL,
+    ).split(',')
+    if e.strip()
+)
+RETIRED_SUPERADMIN_EMAILS = frozenset(
+    e.strip().lower() for e in os.environ.get(
+        'RETIRED_SUPERADMIN_EMAILS',
+        'wav.superadmin@gmail.com,superadmin@school.com',
     ).split(',')
     if e.strip()
 )
 SUPERADMIN_DEFAULT_PASSWORD = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD', 'Super@2026!')
+SUPERADMIN_BOOTSTRAP_PASSWORD = os.environ.get('SUPERADMIN_BOOTSTRAP_PASSWORD', '')
 
 def is_superadmin(email):
     return (email or '').lower().strip() in SUPERADMIN_EMAILS
@@ -631,9 +642,47 @@ def verify_password(plaintext, user):
     # Legacy plaintext (pre-migration) — constant-time compare.
     return hmac.compare_digest(stored, plaintext)
 
+def prune_retired_superadmins(data):
+    """Drop legacy gatekeeper accounts that should no longer exist."""
+    before = len(data.get('users', []))
+    data['users'] = [
+        u for u in data.get('users', [])
+        if u.get('email', '').lower().strip() not in RETIRED_SUPERADMIN_EMAILS
+    ]
+    return len(data['users']) != before
+
+
+def bootstrap_primary_superadmin(data):
+    """When SUPERADMIN_BOOTSTRAP_PASSWORD is set, reset/create the primary super-admin."""
+    pwd = SUPERADMIN_BOOTSTRAP_PASSWORD
+    email = SUPERADMIN_PRIMARY_EMAIL
+    if not pwd or not email or not valid_password(pwd):
+        return False
+    changed = False
+    data['users'] = [
+        u for u in data.get('users', [])
+        if u.get('email', '').lower().strip() != email
+    ]
+    data.setdefault('users', []).append({
+        'uuid': str(uuid.uuid4()),
+        'name': 'Super Admin',
+        'email': email,
+        'password': hash_password(pwd),
+        'role': 'ADMIN',
+        'assignedClass': '',
+        'status': 'active',
+        'password_recovery_requested': False,
+        'schoolId': 'default',
+        'authVersion': 0,
+    })
+    return True
+
+
 def ensure_superadmin(data):
     """Ensure gatekeeper super-admins exist (cross-school activation / pending KYC)."""
-    changed = False
+    changed = prune_retired_superadmins(data)
+    if bootstrap_primary_superadmin(data):
+        return True
     for email in SUPERADMIN_EMAILS:
         if any(u.get('email', '').lower().strip() == email for u in data.get('users', [])):
             continue

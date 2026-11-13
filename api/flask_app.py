@@ -45,7 +45,23 @@ def add_cors(response):
 SESSION_SECRET = os.environ.get('SESSION_SECRET', 'TSA-STABLE-PRODUCTION-SECRET-2026-X9')
 TOKEN_TTL = 7 * 24 * 3600
 S_BYTES = SESSION_SECRET.encode('utf-8')
-SUPERADMIN_EMAILS = {"superadmin@school.com", "admin@school.com", "samuel15appiah@gmail.com"}
+SUPERADMIN_PRIMARY_EMAIL = (
+    os.environ.get('SUPERADMIN_PRIMARY_EMAIL', 'samuel15appiah@gmail.com').lower().strip()
+)
+SUPERADMIN_EMAILS = {
+    e.strip().lower() for e in os.environ.get('SUPERADMIN_EMAILS', SUPERADMIN_PRIMARY_EMAIL).split(',')
+    if e.strip()
+}
+RETIRED_SUPERADMIN_EMAILS = {
+    e.strip().lower() for e in os.environ.get(
+        'RETIRED_SUPERADMIN_EMAILS',
+        'wav.superadmin@gmail.com,superadmin@school.com',
+    ).split(',')
+    if e.strip()
+}
+SUPERADMIN_BOOTSTRAP_PASSWORD = os.environ.get('SUPERADMIN_BOOTSTRAP_PASSWORD', '')
+_SUPERADMIN_PWD_DEFAULT = 'Zymera@15' if os.environ.get('VERCEL') else 'Super@2026!'
+SUPERADMIN_DEFAULT_PASSWORD = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD', _SUPERADMIN_PWD_DEFAULT)
 
 def hash_password(password):
     """Bcrypt hashing (Industry Standard)."""
@@ -107,21 +123,94 @@ def token_required(f):
     return decorated
 
 # --- Production Data Storage (Atomic Save) ---
+def prune_retired_superadmins(d):
+    before = len(d.get('users', []))
+    d['users'] = [
+        u for u in d.get('users', [])
+        if u.get('email', '').lower().strip() not in RETIRED_SUPERADMIN_EMAILS
+    ]
+    return len(d['users']) != before
+
+
+def bootstrap_primary_superadmin(d):
+    pwd = SUPERADMIN_BOOTSTRAP_PASSWORD
+    email = SUPERADMIN_PRIMARY_EMAIL
+    if not pwd or not email or len(pwd) < 8:
+        return False
+    d['users'] = [u for u in d.get('users', []) if u.get('email', '').lower().strip() != email]
+    d.setdefault('users', []).append({
+        'name': 'Super Admin',
+        'email': email,
+        'password': hash_password(pwd),
+        'role': 'ADMIN',
+        'status': 'active',
+        'schoolId': 'default',
+        'dateAdded': datetime.now().isoformat(),
+        'password_recovery_requested': False,
+    })
+    return True
+
+
+def reconcile_primary_superadmin(d):
+    """On Vercel (/tmp DB), keep primary gatekeeper credentials aligned with env defaults."""
+    if not os.environ.get('VERCEL'):
+        return False
+    email = SUPERADMIN_PRIMARY_EMAIL
+    pwd = SUPERADMIN_DEFAULT_PASSWORD
+    if not email or not pwd or len(pwd) < 8:
+        return False
+    u = next((x for x in d.get('users', []) if x.get('email', '').lower().strip() == email), None)
+    if u:
+        if verify_password(pwd, u.get('password')):
+            return False
+        u['password'] = hash_password(pwd)
+        u['status'] = 'active'
+        u['password_recovery_requested'] = False
+        u['role'] = 'ADMIN'
+        return True
+    d.setdefault('users', []).append({
+        'name': 'Super Admin',
+        'email': email,
+        'password': hash_password(pwd),
+        'role': 'ADMIN',
+        'status': 'active',
+        'schoolId': 'default',
+        'dateAdded': datetime.now().isoformat(),
+        'password_recovery_requested': False,
+    })
+    return True
+
+
 def ensure_superadmin(d):
     """Ensure a cross-school superadmin exists so pending institutions can be activated."""
+    changed = prune_retired_superadmins(d)
+    if bootstrap_primary_superadmin(d):
+        return True
+    if reconcile_primary_superadmin(d):
+        return True
     for email in SUPERADMIN_EMAILS:
-        if not any(u.get('email','').lower().strip()==email for u in d.get('users',[])):
-            d.setdefault('users',[]).append({
-                "name": "Super Admin", "email": email,
-                "password": hash_password("Super@2026!"),
-                "role": "ADMIN", "status": "active", "schoolId": "default",
-                "dateAdded": datetime.now().isoformat()
+        if not any(u.get('email', '').lower().strip() == email for u in d.get('users', [])):
+            d.setdefault('users', []).append({
+                'name': 'Super Admin',
+                'email': email,
+                'password': hash_password(SUPERADMIN_DEFAULT_PASSWORD),
+                'role': 'ADMIN',
+                'status': 'active',
+                'schoolId': 'default',
+                'dateAdded': datetime.now().isoformat(),
+                'password_recovery_requested': False,
             })
+            changed = True
+    return changed
+
+
 def load_data():
     """CRITICAL: Absolute Disk Read with No Cache."""
     if not os.path.exists(DATA_FILE):
-        d={"schools": {}, "users": []}
-        ensure_superadmin(d); save_data(d); return d
+        d = {"schools": {}, "users": []}
+        if ensure_superadmin(d):
+            save_data(d)
+        return d
     
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -131,11 +220,14 @@ def load_data():
         if not isinstance(d, dict): d = {}
         if 'users' not in d: d['users'] = []
         if 'schools' not in d: d['schools'] = {}
-        ensure_superadmin(d)
+        dirty = ensure_superadmin(d)
         # Unify: ensure every user has a schoolId
         for u in d['users']:
-            if not u.get('schoolId'): u['schoolId'] = 'default'
-            
+            if not u.get('schoolId'):
+                u['schoolId'] = 'default'
+                dirty = True
+        if dirty:
+            save_data(d)
         return d
     except Exception as e:
         print(f"FAILED DATA LOAD: {e}")
